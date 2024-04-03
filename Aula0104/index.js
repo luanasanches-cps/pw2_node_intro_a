@@ -17,7 +17,7 @@ function operation(){
             type: 'list',
             name: 'action',
             message: 'O que você deseja fazer?',
-            choices: ['Criar Conta', 'Consultar Saldo', 'Depositar', 'Sacar', 'Sacar Cheque Especial', 'Sair']
+            choices: ['Criar Conta', 'Consultar Saldo', 'Depositar', 'Sacar', 'Sair']
         }
     ]).then(
         (answer) => {
@@ -41,10 +41,6 @@ function operation(){
         else if(action === 'Sacar')
         {
             withdraw()
-        }
-        else if(action === 'Sacar Cheque Especial')
-        {
-            saqueCheque()
         }
 
         else if(action === 'Sair')
@@ -227,37 +223,10 @@ function withdraw(){
     })
 }
 
-//saque cheque especial
-function saqueCheque(){
-    inquirer.prompt([{
-        name: 'accountName',
-        message: 'De qual conta deseja realizar o saque do Cheque Especial: ',
-    }
-]).then((answer) => {
-    const accountName = answer['accountName']
-    
-    if(!checkAccount(accountName)){
-        console.error(chalk.bgRed.white('Está conta não existe!'))
-
-        return withdraw()
-    }
-
-    inquirer.prompt([{
-            name: 'cheque',
-            message: 'Qual valor deseja retirar do Cheque Especial?',
-        }
-    ]).then((answer) => {
-        const cheque = answer['cheque']
-
-        removeCheque(accountName, cheque)
-        operation()
-    })
-})
-}
-
-//Remover dinheiro da conta
+//Remover dinheiro da conta e desconto do cheque
 function removeAmount(accountName, amount){
     const accountData = getAccount(accountName)
+    const chequeData = getCheque(accountName)
 
     if(!amount){
         console.log(chalk.bgRed.white('Um erro ocorreu, tente mais tarde.'))
@@ -265,8 +234,21 @@ function removeAmount(accountName, amount){
     }
 
     if(accountData.balance < amount){
-       console.error(chalk.bgRed.white('O valor não está disponível pois é menor do que o valor que você possui!'))
-        return withdraw()
+        
+    accountData.balance = parseFloat(accountData.balance) + parseFloat(chequeData.balance) - parseFloat(amount)
+
+    fs.writeFileSync(
+        `cheque/${accountName}.json`,
+        JSON.stringify(chequeData),
+        function (err){
+            console.error(err)
+        }
+    )
+
+        if(accountData.balance < amount){
+            console.error(chalk.bgRed.white('O valor não está disponível pois é menor do que o valor que você possui!'))
+             return withdraw()
+        }
     }
 
     accountData.balance = parseFloat(accountData.balance) - parseFloat(amount)
@@ -279,34 +261,9 @@ function removeAmount(accountName, amount){
         }
     )
 
-    console.info(chalk.bgBlueBright.blue(`O valor: ${cheque} foi retirado da conta: ${accountName}`))
-}
-
-//Remover dinheiro do cheque
-function removeCheque(accountName, cheque){
-    const chequeData = getCheque(accountName)
-
-    if(!cheque){
-        console.log(chalk.bgRed.white('Um erro ocorreu, tente mais tarde.'))
-        return withdraw()
-    }
-
-    if(chequeData.balance < cheque){
-       console.error(chalk.bgRed.white('O valor não está disponível pois é menor do que o valor que você possui!'))
-        return withdraw()
-    }
-
-    chequeData.balance = parseFloat(chequeData.balance) - parseFloat(cheque)
-
-    fs.writeFileSync(
-        `cheque/${accountName}.json`,
-        JSON.stringify(chequeData),
-        function (err){
-            console.error(err)
-        }
-    )
-
-    console.info(chalk.bgred.white(`O valor: ${cheque} de Cheque Especial foi retirado da conta: ${accountName}`))
+    console.info(chalk.bgBlueBright.blue(`O valor: ${amount} foi retirado da conta: ${accountName}`))
+    console.info(chalk.bgRed.white(`Foi percebido que o valor retirado era menor que o saldo que o usuário possuía!`))
+    console.info(chalk.bgRed.white(`Foi descontado do seu Cheque Especial! Valor do Cheque atual: ${chequeData.balance}`))
 }
 
 //validar saldo da conta e do cheque
