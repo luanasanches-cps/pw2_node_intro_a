@@ -17,7 +17,7 @@ function operation(){
             type: 'list',
             name: 'action',
             message: 'O que você deseja fazer?',
-            choices: ['Criar Conta', 'Consultar Saldo', 'Depositar', 'Sacar', 'Sacar Cheque Especial', 'Sair']
+            choices: ['Criar Conta', 'Consultar Saldo', 'Depositar', 'Sacar', 'Sair']
         }
     ]).then(
         (answer) => {
@@ -41,10 +41,6 @@ function operation(){
         else if(action === 'Sacar')
         {
             withdraw()
-        }
-        else if(action === 'Sacar Cheque Especial')
-        {
-            saqueCheque()
         }
 
         else if(action === 'Sair')
@@ -104,16 +100,8 @@ function buildAccount()
                 console.error(err)
             }
         )
-        fs.writeFileSync(
-            `cheque/${accountName}.json`,
-            `{"balance": 2000}`,
-            function(err){
-                console.error(err)
-            }
-        )
         
             console.info(chalk.bgGreen.white('Bem vindo(a) ao Accounts Bank: ' + accountName))
-            console.info(chalk.bgGreen.white('Você acabou de ganhar R$2.000,00 de cheque especial!'))
             console.info(chalk.green('Obrigado pela preferência!'))
 
         operation()
@@ -189,15 +177,6 @@ function getAccount(accountName){
     return JSON.parse(accountJson)
 }
 
-//Pegar o valor do cheque
-function getCheque(accountName){
-    const chequeJson = fs.readFileSync(`cheque/${accountName}.json`, {
-        encoding: 'utf-8',
-        flag: 'r'
-    })
-    return JSON.parse(chequeJson)
-}
-
 //criando a função de saque
 function withdraw(){
     inquirer.prompt([{
@@ -227,34 +206,6 @@ function withdraw(){
     })
 }
 
-//saque cheque especial
-function saqueCheque(){
-    inquirer.prompt([{
-        name: 'accountName',
-        message: 'De qual conta deseja realizar o saque do Cheque Especial: ',
-    }
-]).then((answer) => {
-    const accountName = answer['accountName']
-    
-    if(!checkAccount(accountName)){
-        console.error(chalk.bgRed.white('Está conta não existe!'))
-
-        return withdraw()
-    }
-
-    inquirer.prompt([{
-            name: 'cheque',
-            message: 'Qual valor deseja retirar do Cheque Especial?',
-        }
-    ]).then((answer) => {
-        const cheque = answer['cheque']
-
-        removeCheque(accountName, cheque)
-        operation()
-    })
-})
-}
-
 //Remover dinheiro da conta
 function removeAmount(accountName, amount){
     const accountData = getAccount(accountName)
@@ -282,34 +233,6 @@ function removeAmount(accountName, amount){
     console.info(chalk.bgBlueBright.blue(`O valor: ${cheque} foi retirado da conta: ${accountName}`))
 }
 
-//Remover dinheiro do cheque
-function removeCheque(accountName, cheque){
-    const chequeData = getCheque(accountName)
-
-    if(!cheque){
-        console.log(chalk.bgRed.white('Um erro ocorreu, tente mais tarde.'))
-        return withdraw()
-    }
-
-    if(chequeData.balance < cheque){
-       console.error(chalk.bgRed.white('O valor não está disponível pois é menor do que o valor que você possui!'))
-        return withdraw()
-    }
-
-    chequeData.balance = parseFloat(chequeData.balance) - parseFloat(cheque)
-
-    fs.writeFileSync(
-        `cheque/${accountName}.json`,
-        JSON.stringify(chequeData),
-        function (err){
-            console.error(err)
-        }
-    )
-
-    console.info(chalk.bgred.white(`O valor: ${cheque} de Cheque Especial foi retirado da conta: ${accountName}`))
-}
-
-//validar saldo da conta e do cheque
 function getAccountBalance(){
     inquirer.prompt([
         {
@@ -324,10 +247,8 @@ function getAccountBalance(){
         }
 
         const accountData = getAccount(accountName)
-        const chequeData = getCheque(accountName)
 
         console.info(chalk.bgGreen.white(`A conta: ${accountName}, tem saldo de: ${accountData.balance}`))
-        console.info(chalk.bgBlue.green(`E de saldo de cheque especial de: ${chequeData.balance}`))
 
         operation()
     })
