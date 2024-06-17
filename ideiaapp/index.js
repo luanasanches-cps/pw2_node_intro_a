@@ -22,11 +22,44 @@ app.use(
   })
 )
 
+app.use(express.json())
+app.use(
+  //sessão
+  session({
+    //nome da sessão
+    name: 'session',
+    secret: 'nossosegredo',
+    resave: false,
+    saveUninitialized: false,
+    store: new FileStore ({
+      logFn: function () {},       //salvar no sistema operacional
+      path: require('path').join(require('os').tmpdir(), 'session'),
+    }),
+    cookie: {
+      secure: false,
+      maxAge: 3600000,
+      expires: new Date(Date.now() + 360000),
+      httpOnly: true,
+    },
+  }),
+)
+app.use(flash())
+
 app.use(express.static('public'))
+app.use((req, res, next) => {
+  console.log(req.session.id)
+
+  if(req.session.userid){
+    res.locals.session = req.session
+  }
+  next()
+})
 app.use('/ideias', ideiasRoutes)
 app.use('/', authRouter)
+
+app.get('/', IdeiaController.showIdeias)
 conn
-.sync({force: true})
+.sync()
 .then(() =>{
     app.listen(3000, () => {
         console.log('Servidor operando na porta local: http://127.0.0.1:3000')
